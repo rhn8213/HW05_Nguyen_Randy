@@ -33,11 +33,14 @@ def find_num_of_occurrences(threshold, df):
     # column_name - name of column to separate by threshold
     # returns the best threshold as calculated by the minimum gini index
 def find_best_threshold(df, column_name):
+    if column_name == "Age":
+        increment = 2
+    if column_name == ""
+    best_threshold = 0
+    best_weighted_gini = 100
     minimum = int(df[column_name].min(axis = 0))
     maximum = int(df[column_name].max(axis = 0))
-    print(minimum)
-    print(maximum)
-    for threshold in range(minimum, maximum + 1):
+    for threshold in range(minimum, maximum):
         df_lower = df[df[column_name] <= threshold]
         df_upper = df[df[column_name] > threshold]
         df_lower_assam = df_lower[df_lower['Class'] == "Assam"]
@@ -46,14 +49,28 @@ def find_best_threshold(df, column_name):
         df_upper_bhuttan = df_upper[df_upper['Class'] == "Bhuttan"]
         count_lower_assam_upper_bhuttan = len(df_lower_assam) + len(df_upper_bhuttan)
         count_upper_assam_lower_bhuttan = len(df_upper_assam) + len(df_lower_bhuttan)
-        if count_lower_assam_upper_bhuttan > count_upper_assam_lower_bhuttan:
+        if count_lower_assam_upper_bhuttan >= count_upper_assam_lower_bhuttan:
             upper = "Bhuttan"
             lower = "Assam"
+            gini_lower = (1 - ((len(df_lower_assam)/len(df_lower))**2)) - (len(df_lower_bhuttan)/len(df_lower))**2
+            gini_upper = (1 - ((len(df_upper_bhuttan) / len(df_upper))**2)) - len(df_upper_assam)/len(df_upper)**2
+            weighted_gini = len(df_lower)/len(df) * gini_lower + len(df_upper)/len(df) * gini_upper
+            if weighted_gini < best_weighted_gini:
+                best_weighted_gini = weighted_gini
+                best_threshold = threshold
         if count_upper_assam_lower_bhuttan > count_lower_assam_upper_bhuttan:
             upper = "Assam"
             lower = "Bhuttan"
-        else:
-            # find most 50/50 split
+            gini_lower = (1 - ((len(df_lower_bhuttan)/len(df_lower))**2)) - (len(df_lower_assam)/len(df_lower))**2
+            gini_upper = (1 - ((len(df_upper_assam)/len(df_upper))**2)) - (len(df_upper_bhuttan)/len(df_upper))**2
+            weighted_gini = len(df_lower) / len(df) * gini_lower + len(df_upper) / len(df) * gini_upper
+            if weighted_gini < best_weighted_gini:
+                best_weighted_gini = weighted_gini
+                best_threshold = threshold
+    print(best_weighted_gini)
+    print("Upper:",upper)
+    print("Lower:",lower)
+    return best_threshold
 
 def main():
     testing_file = sys.argv[1]
@@ -67,8 +84,12 @@ def main():
     data.update(data['Age'].apply((lambda x: quantize_num(x, 2))))
     data.update(data['Ht'].apply((lambda x: quantize_num(x, 5))))
     data.update(data.apply((lambda x: quantize_num(x, 1) if x.name != 'Age' and x.name != 'Ht' and x.name != 'Class' else x)))
-
-    find_best_threshold(data[['Age', 'Class']], 'Age')
+    print(data.head())
+    for column_name, content in data.iteritems():
+        if column_name != 'Class':
+            print(column_name)
+            best_column_threshold = find_best_threshold(data[[column_name, 'Class']], column_name)
+            print(best_column_threshold)
 
 
 if __name__ == "__main__" :
